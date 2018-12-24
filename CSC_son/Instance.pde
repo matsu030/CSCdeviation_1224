@@ -1,28 +1,60 @@
 class  Instance {
-  Coalition N ;
+  Coalition grandCoalition ;
   Preference profile ;
-  CoalitionSet allCoalitions ;
+  Coalition[] allCoalitions ;
   Instance(int n) {
-    N = new Coalition(n) ;
-    profile = new Preference(N) ;
-    allCoalitions = N.powerSet() ;
+    setCoalition(n);
+    setPreference() ;
   }
+  void setCoalition(int n) {
+    Player[] players = new Player[n] ;
+    for (int i = 0 ; i < players.length ; i++) {
+      players[i] = new Player(i) ;
+    }
+    int nn = (1 << n) - 1 ;
+    allCoalitions = new Coalition[nn + 1] ;
+    for (int b = 0 ; b < allCoalitions.length ; b++) {
+      allCoalitions[b] = new Coalition(n, b, players) ;
+    }
+    for (int b = 0 ; b < allCoalitions.length ; b++) {
+      allCoalitions[b].complement = allCoalitions[nn - b] ;
+    }
+    grandCoalition = allCoalitions[nn] ;
+  }
+  void setPreference() {
+    profile = new Preference(grandCoalition) ;
+    grandCoalition.setPreference(profile) ;
+    for (Coalition c : allCoalitions) {
+      for (Player p : grandCoalition) {
+        c.evaluation[p.index] = p.evaluation(c) ;
+      }
+    }
+  }
+  boolean isCSCDeviation(Coalition c) {
+    if (c.isEmpty()) return false ;
 
-  //Coalition findCSCDeviation(CoalitionSet pi) {
-  //  pi.setAffiliation() ;
-  //  for (Coalition X : allCoalitions) {
-  //    if (isCSCDeviation(pi, X)) {
-  //      return X ;
-  //    }
-  //  }
-  //  return null ;
-  //}
+    boolean wannaGo = false ;
+    for (Player p : c) {
+      int newUtility = c.evaluation[p.index] ;
+      if (newUtility > p.utility) wannaGo = true ;
+      else if (p.utility > newUtility) return false ;
+    }
+    if (!wannaGo) return false ;
+
+    for (Player p : c.complement) {
+      int b = p.affiliation.bit & c.bit ;
+      if (b == 0) continue ;
+      if (allCoalitions[b].evaluation[p.index] > 0) return false ;
+    }
+    return true ;
+  }
 
   Coalition findCSCDeviation(CoalitionSet pi) {
     pi.setAffiliation() ;
-    for (Coalition X : allCoalitions) {
-      if (isCSCDeviation(pi, X)) {
-        return X ;
+    for (int i = 1 ; i < allCoalitions.length ; i++) {
+      Coalition c = allCoalitions[i] ;
+      if (isCSCDeviation(c)) {
+        return c ;
       }
     }
     return null ;
@@ -34,7 +66,7 @@ class  Instance {
     for (int k = 1; k <= maxsize; k++) {
       for (int r = 1; r <= combination(playerNum, k); r++) {
         Coalition X = KSubsetRevDoorUnRank(r, k, playerNum) ;
-        if (isCSCDeviation(pi, X)) {
+        if (isCSCDeviation(X)) {
           return X ;
         }
       }
@@ -42,32 +74,10 @@ class  Instance {
     return null ;
   }
 
-  boolean isCSCDeviation(CoalitionSet pi, Coalition X) {
-    if (X.isEmpty()) return false ;//これはallcoalitionsに空集合があるから
-    //X が pi からの CSC 逸脱のとき true, どうでない時 false
-    boolean wannaGo = false ;
-    for (Player p : X) {
-      int newUtility = p.evaluation(X) ;
-      if (newUtility > p.utility) wannaGo = true ;
-      if (p.utility > newUtility) return false ;
-    }
-    if (!wannaGo) return false ;
-    Coalition remains = (Coalition) N.clone() ;
-    remains.removeAll(X) ;
-    for (Player p : remains)
-      if (!p.permit(X)) return false ;
-    //
-    return true ;
-  }
-
-
-
   int findCSCStablePartition() {
     CoalitionSet pi = new CoalitionSet() ;
-    for (Player p : N) {
-      Coalition single = new Coalition() ;
-      single.add(p) ;
-      pi.add(single) ;
+    for (Player p : grandCoalition) {
+      pi.add(allCoalitions[1 << p.index]) ;
     }
     pi.setAffiliation() ;
     return findCSCStablePartition(pi) ;
@@ -81,7 +91,7 @@ class  Instance {
     while (true) {
       Coalition d = null ;
       for (Coalition c : allCoalitions) {
-        if (! isCSCDeviation( pi, c )) continue ;
+        if (! isCSCDeviation(c)) continue ;
         if (d == null || comparison1(c, d)) d = c ;  //comparison1を変えることによって行いたい尺度を指定できる comparisonMax(pi, c, d)
       }
       if (d == null) break ;
@@ -99,7 +109,7 @@ class  Instance {
 
   int findCSCStablePartitionMax() {
     CoalitionSet pi = new CoalitionSet() ;
-    for (Player p : N) {
+    for (Player p : grandCoalition) {
       Coalition single = new Coalition() ;
       single.add(p) ;
       pi.add(single) ;
@@ -118,7 +128,7 @@ class  Instance {
     while (true) {
       Coalition d = null ;
       for (Coalition c : allCoalitions) {
-        if (! isCSCDeviation( pi, c )) continue ;
+        if (! isCSCDeviation(c )) continue ;
         if (d == null || comparisonMax(pi, c, d)) d = c ;  //comparison1を変えることによって行いたい尺度を指定できる comparisonMax(pi, c, d)
       }
       if (d == null) break ;
@@ -136,7 +146,7 @@ class  Instance {
 
   int findCSCStablePartition3to1() {
     CoalitionSet pi = new CoalitionSet() ;
-    for (Player p : N) {
+    for (Player p : grandCoalition) {
       Coalition single = new Coalition() ;
       single.add(p) ;
       pi.add(single) ;
@@ -150,7 +160,7 @@ class  Instance {
     while (true) {
       Coalition d = null ;
       for (Coalition c : allCoalitions) {
-        if (! isCSCDeviation( pi, c )) continue ;
+        if (! isCSCDeviation(c )) continue ;
         if (d == null || comparison3to1(c, d)) d = c ;  //comparison1を変えることによって行いたい尺度を指定できる comparisonMax(pi, c, d)
       }
       if (d == null) break ;
@@ -168,7 +178,7 @@ class  Instance {
 
   int findCSCStablePartition3to2() {
     CoalitionSet pi = new CoalitionSet() ;
-    for (Player p : N) {
+    for (Player p : grandCoalition) {
       Coalition single = new Coalition() ;
       single.add(p) ;
       pi.add(single) ;
@@ -181,7 +191,7 @@ class  Instance {
     while (true) {
       Coalition d = null ;
       for (Coalition c : allCoalitions) {
-        if (! isCSCDeviation( pi, c )) continue ;
+        if (! isCSCDeviation(c )) continue ;
         if (d == null || comparison3to2(c, d)) d = c ;  //comparison1を変えることによって行いたい尺度を指定できる comparisonMax(pi, c, d)
       }
       if (d == null) break ;
@@ -199,7 +209,7 @@ class  Instance {
 
   int findCSCStablePartition4to1() {
     CoalitionSet pi = new CoalitionSet() ;
-    for (Player p : N) {
+    for (Player p : grandCoalition) {
       Coalition single = new Coalition() ;
       single.add(p) ;
       pi.add(single) ;
@@ -212,7 +222,7 @@ class  Instance {
     while (true) {
       Coalition d = null ;
       for (Coalition c : allCoalitions) {
-        if (! isCSCDeviation( pi, c )) continue ;
+        if (! isCSCDeviation(c )) continue ;
         if (d == null || comparison4to1(c, d)) d = c ;  //comparison1を変えることによって行いたい尺度を指定できる comparisonMax(pi, c, d)
       }
       if (d == null) break ;
@@ -230,7 +240,7 @@ class  Instance {
 
   int findCSCStablePartition4to2() {
     CoalitionSet pi = new CoalitionSet() ;
-    for (Player p : N) {
+    for (Player p : grandCoalition) {
       Coalition single = new Coalition() ;
       single.add(p) ;
       pi.add(single) ;
@@ -243,7 +253,7 @@ class  Instance {
     while (true) {
       Coalition d = null ;
       for (Coalition c : allCoalitions) {
-        if (! isCSCDeviation( pi, c )) continue ;
+        if (! isCSCDeviation(c )) continue ;
         if (d == null || comparison4to2(c, d)) d = c ;  //comparison1を変えることによって行いたい尺度を指定できる comparisonMax(pi, c, d)
       }
       if (d == null) break ;
@@ -260,7 +270,7 @@ class  Instance {
 
   int findCSCStablePartition5() {
     CoalitionSet pi = new CoalitionSet() ;
-    for (Player p : N) {
+    for (Player p : grandCoalition) {
       Coalition single = new Coalition() ;
       single.add(p) ;
       pi.add(single) ;
@@ -273,7 +283,7 @@ class  Instance {
     while (true) {
       Coalition d = null ;
       for (Coalition c : allCoalitions) {
-        if (! isCSCDeviation( pi, c )) continue ;
+        if (! isCSCDeviation(c )) continue ;
         if (d == null || comparison5(c, d)) d = c ;  //comparison1を変えることによって行いたい尺度を指定できる comparisonMax(pi, c, d)
       }
       if (d == null) break ;
@@ -296,20 +306,20 @@ class  Instance {
     int minc = c.get(0).evaluation(c) ;
     for (Player p : c)
       if (minc > p.evaluation(c)) minc = p.evaluation(c) ;
-    Coalition NN = (Coalition) N.clone() ;
-    NN.removeAll(c) ;
+    Coalition NN = c.complement ;
     for (Player p : NN) {
-      int a = p.utility - p.calcInfluence(c) ;
+      int b = p.affiliation.bit & c.bit ;
+      int a = p.utility - allCoalitions[b].evaluation[p.index] ;
       if (minc > a)
         minc = a ;
     }
     int mincc = cc.get(0).evaluation(cc) ;
     for (Player p : cc)
       if (mincc > p.evaluation(cc)) mincc = p.evaluation(cc) ;
-    NN = (Coalition) N.clone() ;
-    NN.removeAll(cc) ;
+    NN = cc.complement ;
     for (Player p : NN) {
-      int a = p.utility - p.calcInfluence(cc) ;
+      int b = p.affiliation.bit & cc.bit ;
+      int a = p.utility - allCoalitions[b].evaluation[p.index] ; ;
       if (mincc > a)
         mincc = a ;
     }
@@ -322,8 +332,8 @@ class  Instance {
     return false ;
   }
 
-  boolean comparison1(Coalition c, Coalition cc ) { //尺度１
-    return(syakudo1(c) > syakudo1(cc));
+  boolean comparison1(Coalition c, Coalition cc) { //尺度１
+    return (syakudo1(c) > syakudo1(cc));
   }
 
   boolean comparison3to1 (Coalition c, Coalition cc) { // 尺度3-1
@@ -352,7 +362,7 @@ class  Instance {
     //utility v_(pi(i))
     //v_i(X) - v_i(pi(i))
     int utilitySum = 0 ;
-    for (Player p : c ) 
+    for (Player p : c )
       utilitySum += (p.evaluation(c) - p.utility) ;
     return utilitySum ;
   }
@@ -360,10 +370,10 @@ class  Instance {
 
   int syakudo3to1 (Coalition c) {  // i ¥in X , p in pi(i) - i  抜けられるプレイヤーの評価値の効用の差分
     int sum = 0 ;
-    Coalition X = (Coalition) N.clone();
-    X.removeAll(c) ; 
-    for (Player i : X) {
-      sum += i.calcInfluence(c) ;
+    Coalition X = c.complement ;
+    for (Player p : X) {
+      int b = p.affiliation.bit & c.bit ;
+      sum += allCoalitions[b].evaluation[p.index] ;
     }
     return sum ;
   }
@@ -407,12 +417,12 @@ class  Instance {
 
   Coalition KSubsetRevDoorUnRank(int r, int k, int n) {
     Coalition t = new Coalition () ;
-    int x = n ; 
+    int x = n ;
     for (int i = k; i >= 1; i --) {
       while (combination(x, i ) > r) {
         x -- ;
       }
-      Player p = N.get(x) ;
+      Player p = grandCoalition.get(x) ;
       t.add(p) ;
       r = combination(x + 1, i ) - r - 1 ;
     }
@@ -422,7 +432,7 @@ class  Instance {
   //  Coalition KSubsetRevDoorSuccessor(Coalition c, int k, int n ) {
   //    Coalition cc = (Coalition) c.clone() ;
   //    cc.get(k).index = n + 1 ;
-  //    int j = 1 ; 
+  //    int j = 1 ;
   //    while ( j < = k && cc.get(j).index == j ) {
   //      j ++ ;
   //    }
@@ -432,7 +442,7 @@ class  Instance {
   //        c.get(j - 1) = j ;
   //        c.get(j - 2) = j - 1 ;
   //      }
-  //    } else 
+  //    } else
   //    if ( c.get(j + 1) != c.get(j) + 1) {
   //      c.get(j - 1) = c.get(j) ;
   //      c.get(j) = c.get(j + 1) ;
@@ -460,12 +470,12 @@ class  Instance {
         T[0]-- ;
       } else {
         T[j - 1] = j ;
-        if (j !=1) 
+        if (j !=1)
           T[j - 2] = j - 1 ;
       }
     } else {
       if (T[j + 1] != (T[j] + 1) ) {
-        if (j != 0) 
+        if (j != 0)
           T[j - 1] = T[j] ;
         T[j] = T[j] + 1 ;
       } else {
@@ -475,7 +485,7 @@ class  Instance {
     }
     Coalition cc = new Coalition() ;
     for (int i = 0; i < k; i++) {
-      cc.add(N.get(T[i])) ;
+      cc.add(grandCoalition.get(T[i])) ;
     }
     return cc ;
   }
@@ -508,7 +518,7 @@ class  Instance {
     }
     Coalition cc = new Coalition() ;
     for (int i = 0; i < k; i++) {
-      cc.add(N.get(T[i])) ;
+      cc.add(grandCoalition.get(T[i])) ;
     }
     return cc ;
   }

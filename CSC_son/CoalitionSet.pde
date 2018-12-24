@@ -1,8 +1,8 @@
 class CoalitionSet extends ArrayList <Coalition> {
   void setAffiliation() {
-    for (Coalition X : this)
-      for (Player p : X)
-        p.setAffiliation(X) ;
+    for (Coalition c : this)
+      for (Player p : c)
+        p.setAffiliation(c) ;
   }
   String toString() {
     String s[] = new String[this.size()] ;

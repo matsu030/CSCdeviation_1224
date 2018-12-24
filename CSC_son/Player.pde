@@ -6,21 +6,24 @@ class Player {
   Player(int i) {
     index = i ;
   }
-  void setPreference(int[] values) {
-    preference = values ;
+  void setPreference(Preference pf) {
+    preference = pf.memberValue[index] ;
   }
   int evaluation(Player p) {
     return preference[p.index];
   }
-  int evaluation(Coalition X) {
+  int evaluation(Coalition c) {
     int eva = 0 ;
-    for (Player p : X)
+    for (Player p : c)
       eva += evaluation(p) ;
     return eva ;
   }
-  void setAffiliation(Coalition X) {
-    affiliation = X ;
-    utility = evaluation(X) ;
+  void setEvaluation(Coalition c) {
+    c.evaluation[index] = evaluation(c) ;
+  }
+  void setAffiliation(Coalition c) {
+    affiliation = c ;
+    utility = c.evaluation[index] ;
   }
   // boolean isAgainst(Coalition X){
   //   return utility > evaluation(X) ;
@@ -28,23 +31,22 @@ class Player {
   // boolean wannaGo(Coalition X){
   //   return evaluation(X) > utility ;
   // }
-  boolean permit(Coalition X) {
 
-    return calcInfluence(X) <= 0 ;
-  }
-  void printPreference() {
-    String s[] = new String[preference.length] ;
-    for (int i = 0; i < preference.length; i++) {
-      s[i] = str(preference[i]) ;
-    }
-    println(join(s, " ")) ;
-  }
-  int calcInfluence(Coalition X) {
+  /*
+  int calcInfluence(Coalition c) {
     int influence = 0 ;
-    for (Player p : X) {
-      if (affiliation != p.affiliation) continue ;
-      influence += evaluation(p) ;
+    for (Player p : c) {
+      if (affiliation == p.affiliation) {
+        influence += evaluation(p) ;
+      }
     }
     return influence ;
+  }
+  boolean permit(Coalition X) {
+    return calcInfluence(X) <= 0 ;
+  }
+  */
+  void printPreference() {
+    println(join(nf(preference, 0), " ")) ;
   }
 }

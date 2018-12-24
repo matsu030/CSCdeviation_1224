@@ -1,13 +1,12 @@
-int playerNum ;
-int maxsize ;
+int playerNum = 4 ; // プレイヤー人数
+int maxsize = 3 ; //一つの集団の最大の大きさ
+int prefRange = 5 ;
 Instance ins ;
 void setup() {
- playerNum = 4;// プレイヤー人数
- maxsize = 3 ; //一つの集団の最大の大きさ
  //for (int i = 0; i < 50; i++) {  //様々なインスタンスを同時に試すとき
  ins = new Instance(playerNum) ;
  //println(ins.profile) ;
- for (Player p : ins.N)
+ for (Player p : ins.grandCoalition)
  p.printPreference() ;
  //println("-------------------------------------------------");
  println("尺度１の逸脱回数") ;
@@ -19,7 +18,7 @@ void setup() {
  //println("尺度３-１の逸脱回数 :") ; //プレイヤーの平等性に意識．社会に最も向いているかも
  //println(ins.findCSCStablePartition3to1()) ;
  println("-------------------------------------------------");
- 
+
  //int m = combination(playerNum, 2);
  //for (int i = 0; i < m; i++) {
  //println("R :"+ ins.KSubsetRevDoorUnRank(i, 2, playerNum)) ;
@@ -35,7 +34,7 @@ void setup() {
  //println(c + " to " +  ins.KSubsetRevDoorSuccessor2(c, c.size(), playerNum));
  exit();
  }
- 
+
 
 
 //CSC stable
@@ -45,12 +44,12 @@ void setup() {
 //set pi = { Y - X | Y in Pi & Y not subseteq X } & { X }
 //return pi
 int combination (int n, int r ) {
-  int x = 1, y = 1; 
-  int nn = n, rr = r; 
+  int x = 1, y = 1;
+  int nn = n, rr = r;
   for (int i = 0; i < r; i++) {
-    x *= nn; 
-    y *= rr; 
-    nn--; 
+    x *= nn;
+    y *= rr;
+    nn--;
     rr--;
   }
   return x / y;
@@ -63,7 +62,7 @@ void kSubset(int k, int n) {
   t[k] = n ;
   if (k == n) {
     setPrint(t)   ;
-  } else { 
+  } else {
     while (true  ) {
       setPrint(t)   ;
       if (!succ(t, n)) break ;
@@ -99,7 +98,7 @@ boolean succ(int[] t, int n ) {
 }
 
 void setPrint(int[] t) {
-  for (int i = 0; i < t.length - 1; i++) 
+  for (int i = 0; i < t.length - 1; i++)
     print(t[i]) ;
   println() ;
 }
