@@ -1,9 +1,15 @@
 class Game {
-  CoalitionUtility utility ;
   Player[] players ;
-  Game(int n) {
-    utility = new CoalitionUtility(n) ;
-    players = utility.players ;
+  CoalitionUtility utility ;
+  Game(int n, int[] ord) {
+    playerSetup(n) ;
+    utility = new CoalitionUtility(players, ord) ;
+  }
+  void playerSetup(int n) {
+    players = new Player[n] ;
+    for (int i = 0 ; i < n ; i++) {
+      players[i] = new Player(i) ;
+    }
   }
   void setProfile() {
     int n = players.length ;
@@ -28,14 +34,18 @@ class Game {
     }
     return true ;
   }
+  void setAffiliation(CoalitionSet cs) {
+    cs.setAffiliation() ;
+    utility.setUtility() ;
+  }
   CoalitionSet findCSCPartition() {
     CoalitionSet pi = utility.getSingletonPartition() ;
-    pi.setAffiliation() ;
+    setAffiliation(pi) ;
     while (true) {
-      CoalitionSet deviations = utility.getDeviationSet(pi) ;
-      if (deviations.isEmpty()) break ;
-      pi = utility.implement(pi, deviations.get(0)) ;
-      pi.setAffiliation() ;
+      Coalition deviation = utility.getDeviation(pi) ;
+      if (deviation == null) break ;
+      pi = utility.implement(pi, deviation) ;
+      setAffiliation(pi) ;
       println(pi) ;
     }
     return pi ;

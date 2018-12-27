@@ -1,9 +1,6 @@
 class Coalition extends ArrayList<Player> {
-  int[] evaluations ;
   int bit ;
-  Coalition complement ;
-  Coalition(int n, int b) {
-    evaluations = new int[n] ;
+  Coalition(int b) {
     bit = b ;
   }
   String toString() {
@@ -16,16 +13,6 @@ class Coalition extends ArrayList<Player> {
   void setAffiliation() {
     for (Player p : this) {
       p.affiliation = this ;
-      p.utility = p.evaluation(this) ;
     }
-  }
-  boolean hasWeakIncentive() {
-    boolean incentive = false ;
-    for (Player p : this) {
-      int gain = p.evaluation(this) - p.utility ;
-      if (gain < 0) return false ;
-      if (gain > 0) incentive = true ;
-    }
-    return incentive ;
   }
 }

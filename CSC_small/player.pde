@@ -19,7 +19,4 @@ class Player {
   int utility() {
     return utility ;
   }
-  int utility(Coalition c) {
-    return c.evaluations[index] ;
-  }
 }

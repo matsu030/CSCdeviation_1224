@@ -1,45 +1,31 @@
 class CoalitionUtility {
   Player[] players ;
-  Coalition[] coalitions ;
   int complementBit ;
-  CoalitionUtility(int n) {
-    playerSetup(n) ;
-    coalitionSetup(n) ;
-    complementBit = (1 << n) - 1 ;
+  ComparisonManager manager ;
+  CoalitionUtility(Player[] pa, int[] ord) {
+    players = pa ;
+    manager = new ComparisonManager(this, ord) ;
+    complementBit = (1 << players.length) - 1 ;
   }
-  void playerSetup(int n) {
-    players = new Player[n] ;
-    for (int i = 0 ; i < n ; i++) {
-      players[i] = new Player(i) ;
-    }
-  }
-  void coalitionSetup(int n) {
-    coalitions = new Coalition[1 << n] ;
-    for (int b = 0 ; b < coalitions.length ; b++) {
-      coalitions[b] = new Coalition(n, b) ;
-      for (int i = 0 ; i < n ; i++) {
-        if ((b & (1 << i)) == 0) continue ;
-        coalitions[b].add(players[i]) ;
-      }
-    }
-    int nn = (1 << n) - 1 ;
-    for (int b = 0 ; b < coalitions.length ; b++) {
-      coalitions[b].complement = coalitions[nn - b] ;
-    }
+  void id() {
+    println("full") ;
   }
   void setProfile(int[][] profile) {
     for (Player p : players) {
       p.preference = profile[p.index] ;
-      for (Coalition c : coalitions) {
-        c.evaluations[p.index] = p.evaluation(c) ;
-      }
     }
   }
   Coalition get(int b) {
-    return coalitions[b] ;
+    Coalition c = new Coalition(b) ;
+    for (int i = 0 ; i < players.length ; i++) {
+      if ((b & (1 << i)) > 0) c.add(players[i]) ;
+    }
+    return c ;
   }
   Coalition getSingleton(Player p) {
-    return coalitions[1 << p.index] ;
+    Coalition c = new Coalition(1 << p.index) ;
+    c.add(players[p.index]) ;
+    return c ;
   }
   CoalitionSet getSingletonPartition() {
     CoalitionSet cs = new CoalitionSet() ;
@@ -49,13 +35,32 @@ class CoalitionUtility {
     return cs ;
   }
   Coalition getIntersection(Coalition c, Coalition cc) {
-    return coalitions[c.bit & cc.bit] ;
+    return get(c.bit & cc.bit) ;
   }
   Coalition getSetminus(Coalition c, Coalition cc) {
-    return coalitions[c.bit - (c.bit & cc.bit)] ;
+    return get(c.bit - (c.bit & cc.bit)) ;
   }
   Coalition getComplement(Coalition c) {
-    return coalitions[complementBit - c.bit] ;
+    return get(complementBit - c.bit) ;
+  }
+  void setEvaluation() {
+  }
+  int evaluation(Player p, Coalition c) {
+    return p.evaluation(c) ;
+  }
+  void setUtility() {
+    for (Player p : players) {
+      p.utility = evaluation(p, p.affiliation) ;
+    }
+  }
+  boolean hasWeakIncentive(Coalition c) {
+    boolean incentive = false ;
+    for (Player p : c) {
+      int gain = evaluation(p, c) - p.utility ;
+      if (gain < 0) return false ;
+      if (gain > 0) incentive = true ;
+    }
+    return incentive ;
   }
   boolean permit(CoalitionSet cs, Coalition c) {
     for (Coalition cc : cs) {
@@ -63,28 +68,73 @@ class CoalitionUtility {
       if (deviators.isEmpty() || deviators == cc) continue ;
       Coalition reminders = getSetminus(cc, deviators) ;
       for (Player p : reminders) {
-        if (deviators.evaluations[p.index] > 0) return false ;
+        if (evaluation(p, deviators) > 0) return false ;
       }
     }
     return true ;
   }
   boolean isCSCDeviation(CoalitionSet cs, Coalition c) {
-    return c.hasWeakIncentive() && permit(cs, c) ;
+    return hasWeakIncentive(c) && permit(cs, c) ;
   }
-  CoalitionSet getDeviationSet(CoalitionSet cs) {
-    CoalitionSet deviations = new CoalitionSet() ;
-    for (Coalition c : coalitions) {
-      if (isCSCDeviation(cs, c)) deviations.add(c) ;
+  Coalition getDeviation(CoalitionSet cs) {
+    Coalition d = null ;
+    for (int b = 1 ; b <= complementBit ; b++) {
+      Coalition c = get(b) ;
+      if (! isCSCDeviation(cs, c)) continue ;
+      d = manager.getWinner(d, c) ;
     }
-    return deviations ;
+    return d ;
   }
   CoalitionSet implement(CoalitionSet pi, Coalition c) {
     CoalitionSet cs = new CoalitionSet() ;
-    cs.add(c) ;
     for (Coalition cc : pi) {
       Coalition nc = getSetminus(cc, c) ;
-      if (!nc.isEmpty()) cs.add(nc) ;
+      if (! nc.isEmpty()) cs.add(nc) ;
     }
+    cs.add(c) ;
     return cs ;
+  }
+}
+
+class CoalitionUtilityBit extends CoalitionUtility {
+  Coalition[] coalitions ;
+  int[][] evaluations ;
+  CoalitionUtilityBit(Player[] pa, int[] ord) {
+    super(pa, ord) ;
+    coalitionSetup(pa.length) ;
+  }
+  void id() {
+    println("bit") ;
+  }
+  void coalitionSetup(int n) {
+    coalitions = new Coalition[1 << n] ;
+    for (int b = 0 ; b < coalitions.length ; b++) {
+      coalitions[b] = new Coalition(b) ;
+      for (int i = 0 ; i < n ; i++) {
+        if ((b & (1 << i)) == 0) continue ;
+        coalitions[b].add(players[i]) ;
+      }
+    }
+  }
+  void setEvaluation() {
+    evaluations = new int[coalitions.length][players.length] ;
+    for (Player p : players) {
+      for (Coalition c : coalitions) {
+        evaluations[c.bit][p.index] = p.evaluation(c) ;
+      }
+    }
+  }
+  void setProfile(int[][] profile) {
+    super.setProfile(profile) ;
+    setEvaluation() ;
+  }
+  int evaluation(Player p, Coalition c) {
+    return evaluations[c.bit][p.index] ;
+  }
+  Coalition get(int b) {
+    return coalitions[b] ;
+  }
+  Coalition getSingleton(Player p) {
+    return get(1 << p.index) ;
   }
 }
